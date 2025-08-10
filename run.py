@@ -1,7 +1,7 @@
 import os
 import yt_dlp
 
-playlist_url = "https://www.youtube.com/playlist?list=PLnlL14v8ZEzdlPqvRFxbAgOAOFoOnbLMH" # change playlist link
+playlist_url = "https://www.youtube.com/playlist?list=PLnlL14v8ZEzdlPqvRFxbAgOAOFoOnbLMH"
 
 ydl_opts = {
     'extract_flat': True,  # Don't download, just extract info
@@ -23,12 +23,16 @@ with yt_dlp.YoutubeDL(ydl_opts) as ydl:
 folder_path = "downloaded_audios"
 os.makedirs(folder_path, exist_ok=True)
 
+def remove_topic_suffix(text: str) -> str:
+    """Remove ' - Topic' from the end of the string if present."""
+    return text.replace(" - Topic", "")
+
 # yt_dlp options
 ydl_opts = {
     'format': 'bestaudio/best',  # best audio quality
     'extractaudio': True,        # extract audio only
     'audioformat': 'mp3',        # convert to mp3
-    'outtmpl': os.path.join(folder_path, '%(title)s.%(ext)s'),
+    'outtmpl': os.path.join(folder_path, '%(title)s-%(uploader)s.%(ext)s'),
     'quiet': False,              # show progress
 }
 
@@ -53,5 +57,12 @@ for filename in os.listdir(folder_path):
         
         os.rename(old_path, new_path)
         print(f"Renamed: {filename} -> {new_filename}")
+
+for filename in os.listdir(folder_path):
+    old_path = os.path.join(folder_path, filename)
+    new_filename = remove_topic_suffix(filename)
+    new_path = os.path.join(folder_path, new_filename)
+    os.rename(old_path, new_path)
+    print(f"Removed `Topic`: {filename} → {new_filename}")
 
 print("\n✅ All downloads complete!")
