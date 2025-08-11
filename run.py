@@ -13,7 +13,7 @@ logging.basicConfig(
     ]
 )
 
-playlist_url = "https://www.youtube.com/playlist?list=PLnlL14v8ZEzc-MMJ6wLj-Xr7Xx8lKzYRx"
+playlist_url = "https://www.youtube.com/playlist?list=OLAK5uy_mgBd3umcqftnb57H2Ydmc5320xp83EBeQ"
 
 ydl_opts_extract = {
     'extract_flat': True,
@@ -43,13 +43,15 @@ def remove_topic_suffix(text: str) -> str:
     """Remove ' - Topic' from the end of the string if present."""
     return text.replace(" - Topic", "")
 
-# yt_dlp options for download
 ydl_opts_download = {
     'format': 'bestaudio/best',
-    'extractaudio': True,
-    'audioformat': 'mp3',
     'outtmpl': os.path.join(folder_path, '%(title)s-%(uploader)s.%(ext)s'),
-    'quiet': False,
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    }],
+    'ffmpeg_location': r'C:\ffmpeg\bin',
 }
 
 # Download audio files
