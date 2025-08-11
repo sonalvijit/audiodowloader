@@ -2,4 +2,9 @@
 
 ## requirements & setup
 
-`pip install pytube`
+```python
+pip install pytube
+```
+
+### For an editable audio file
+``ffmpeg``
