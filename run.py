@@ -36,7 +36,7 @@ with yt_dlp.YoutubeDL(ydl_opts_extract) as ydl:
         logging.info(f"Extracted URL: {video_url}")
         urls.append(video_url)
 
-folder_path = "downloaded_audios"
+folder_path = "downloads"
 os.makedirs(folder_path, exist_ok=True)
 
 def remove_topic_suffix(text: str) -> str:
