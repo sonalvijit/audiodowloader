@@ -3,7 +3,7 @@ import yt_dlp
 import logging
 
 # === Logging Setup ===
-log_file = "download_log.txt"
+log_file = "download_log.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
