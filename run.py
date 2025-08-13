@@ -1,6 +1,8 @@
 import os
 import yt_dlp
 import logging
+from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3, TCOM
 
 # === Logging Setup ===
 log_file = "download_log.log"
@@ -9,19 +11,19 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler(log_file, encoding="utf-8"),
-        logging.StreamHandler()  # also print to console
+        logging.StreamHandler()
     ]
 )
 
-playlist_url = "https://www.youtube.com/playlist?list=OLAK5uy_mgBd3umcqftnb57H2Ydmc5320xp83EBeQ"
+playlist_url = "https://www.youtube.com/playlist?list=PLnlL14v8ZEzdlPqvRFxbAgOAOFoOnbLMH"
 
+# === Step 1: Extract playlist ===
 ydl_opts_extract = {
     'extract_flat': True,
     'quiet': True,
 }
 
-urls: list = []
-
+urls = []
 with yt_dlp.YoutubeDL(ydl_opts_extract) as ydl:
     playlist_dict = ydl.extract_info(playlist_url, download=False)
 
@@ -36,13 +38,48 @@ with yt_dlp.YoutubeDL(ydl_opts_extract) as ydl:
         logging.info(f"Extracted URL: {video_url}")
         urls.append(video_url)
 
+# === Step 2: Prepare folder ===
 folder_path = "downloads"
 os.makedirs(folder_path, exist_ok=True)
 
-def remove_topic_suffix(text: str) -> str:
-    """Remove ' - Topic' from the end of the string if present."""
-    return text.replace(" - Topic", "")
+# === Step 3: Clean title ===
+def sanitize_title(text: str) -> str:
+    """Remove ' - Topic' and strip whitespace."""
+    return text.replace(" - Topic", "").strip()
 
+# === Step 4: Metadata tag function ===
+def add_metadata(file_path, title, uploader):
+    try:
+        audio = EasyID3(file_path)
+    except Exception:
+        audio = EasyID3()
+    
+    audio["title"] = title
+    audio["artist"] = uploader
+    audio["albumartist"] = uploader
+
+    # Composer needs a special tag
+    audio.save(file_path)
+    id3 = ID3(file_path)
+    id3.add(TCOM(encoding=3, text=[uploader]))
+    id3.save(file_path)
+
+    logging.info(f"🎼 Added metadata → Title: {title}, Artist/Album Artist/Composer: {uploader}")
+
+# === Step 5: Custom logging class ===
+class MyLogger:
+    def debug(self, msg):
+        pass
+    def warning(self, msg):
+        logging.warning(msg)
+    def error(self, msg):
+        logging.error(msg)
+
+def progress_hook(d):
+    if d['status'] == 'finished':
+        logging.info(f"✅ Finished downloading: {d['filename']}")
+
+# === Step 6: Download with metadata ===
 ydl_opts_download = {
     'format': 'bestaudio/best',
     'outtmpl': os.path.join(folder_path, '%(title)s-%(uploader)s.%(ext)s'),
@@ -52,31 +89,33 @@ ydl_opts_download = {
         'preferredquality': '192',
     }],
     'ffmpeg_location': r'C:\ffmpeg\bin',
+    'logger': MyLogger(),
+    'progress_hooks': [progress_hook]
 }
 
-# Download audio files
 with yt_dlp.YoutubeDL(ydl_opts_download) as ydl:
     for url in urls:
-        logging.info(f"🎵 Downloading audio from: {url}")
         try:
-            ydl.download([url])
+            info = ydl.extract_info(url, download=False)
+            title_clean = sanitize_title(info['title'])
+            uploader_clean = sanitize_title(info.get('uploader', 'Unknown'))
+
+            # Update info for clean filename
+            info['title'] = title_clean
+            info['uploader'] = uploader_clean
+
+            # Download
+            filename = ydl.prepare_filename(info)
+            ydl.process_info(info)
+
+            # Convert extension to .mp3
+            mp3_file = os.path.splitext(filename)[0] + ".mp3"
+
+            # Add metadata
+            if os.path.exists(mp3_file):
+                add_metadata(mp3_file, title_clean, uploader_clean)
+
         except Exception as e:
             logging.error(f"Failed to download {url} - {e}")
 
-# Rename downloaded files
-for filename in os.listdir(folder_path):
-    if filename.lower().endswith((".mp4", ".webm")):
-        old_path = os.path.join(folder_path, filename)
-        new_filename = os.path.splitext(filename)[0] + ".mp3"
-        new_path = os.path.join(folder_path, new_filename)
-        os.rename(old_path, new_path)
-        logging.info(f"Renamed: {filename} -> {new_filename}")
-
-for filename in os.listdir(folder_path):
-    old_path = os.path.join(folder_path, filename)
-    new_filename = remove_topic_suffix(filename)
-    new_path = os.path.join(folder_path, new_filename)
-    os.rename(old_path, new_path)
-    logging.info(f"Removed 'Topic': {filename} → {new_filename}")
-
-logging.info("✅ All downloads complete!")
+logging.info("🎯 All downloads complete with metadata!")
