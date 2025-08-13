@@ -3,6 +3,11 @@ import yt_dlp
 import logging
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, TCOM
+from dotenv import load_dotenv
+
+load_dotenv()
+
+playlist_tag = os.getenv("TAG")
 
 # === Logging Setup ===
 log_file = "download_log.log"
@@ -15,7 +20,7 @@ logging.basicConfig(
     ]
 )
 
-playlist_url = "https://www.youtube.com/playlist?list=PLnlL14v8ZEzdlPqvRFxbAgOAOFoOnbLMH"
+playlist_url = f"https://www.youtube.com/playlist?list={playlist_tag}"
 
 # === Step 1: Extract playlist ===
 ydl_opts_extract = {
